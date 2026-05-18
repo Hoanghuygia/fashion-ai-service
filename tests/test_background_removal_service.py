@@ -40,3 +40,25 @@ def test_attachment_repo_create_and_get(session: Session) -> None:
 
 def test_migration_placeholder() -> None:
     assert True
+
+
+def test_storage_client_builds(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("S3_ENDPOINT", "http://localhost:9000")
+    monkeypatch.setenv("S3_ACCESS_KEY", "test-access")
+    monkeypatch.setenv("S3_SECRET_KEY", "test-secret")
+    monkeypatch.setenv("S3_BUCKET", "style-engine-test")
+    monkeypatch.setenv("S3_REGION", "us-west-2")
+    monkeypatch.setenv("S3_USE_SSL", "false")
+    monkeypatch.setenv("S3_PATH_STYLE", "true")
+
+    from app.config import get_settings
+    from app.infrastructure.storage.s3_client import StorageClient
+
+    get_settings.cache_clear()
+
+    client = StorageClient.build()
+
+    assert client.bucket == "style-engine-test"
+    assert client.client.meta.region_name == "us-west-2"
+    assert client.client.meta.endpoint_url == "http://localhost:9000"
+    assert client.client.meta.config.s3["addressing_style"] == "path"

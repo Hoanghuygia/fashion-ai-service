@@ -1,17 +1,19 @@
 from sqlalchemy import select, update
+from sqlalchemy.orm import Session
 
 from app.infrastructure.database.models import Attachment
 
 
 class AttachmentRepository:
-    def __init__(self, session) -> None:
+    def __init__(self, session: Session) -> None:
         self.session = session
 
     def get_active_by_id(self, attachment_id: str) -> Attachment | None:
         stmt = select(Attachment).where(
             Attachment.id == attachment_id, Attachment.is_deleted.is_(False)
         )
-        return self.session.execute(stmt).scalars().first()
+        attachment = self.session.execute(stmt).scalars().first()
+        return attachment
 
     def create(
         self,

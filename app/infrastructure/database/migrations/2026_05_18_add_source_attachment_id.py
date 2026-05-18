@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, MetaData, String, Table, create_engine
+from sqlalchemy import Column, ForeignKey, Index, MetaData, String, Table, create_engine
 
 from app.config import get_settings
 
@@ -11,6 +11,11 @@ def upgrade() -> None:
     if "source_attachment_id" not in attachments.c:
         Column("source_attachment_id", String, ForeignKey("attachments.id"), nullable=True).create(
             attachments
+        )
+    if "source_attachment_id" in attachments.c:
+        Index("ix_attachments_source_attachment_id", attachments.c.source_attachment_id).create(
+            bind=engine,
+            checkfirst=True,
         )
 
 

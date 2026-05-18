@@ -12,11 +12,11 @@ def upgrade() -> None:
         Column("source_attachment_id", String, ForeignKey("attachments.id"), nullable=True).create(
             attachments
         )
-    if "source_attachment_id" in attachments.c:
-        Index("ix_attachments_source_attachment_id", attachments.c.source_attachment_id).create(
-            bind=engine,
-            checkfirst=True,
-        )
+        attachments = Table("attachments", metadata, autoload_with=engine)
+    Index("ix_attachments_source_attachment_id", attachments.c.source_attachment_id).create(
+        bind=engine,
+        checkfirst=True,
+    )
 
 
 def downgrade() -> None:

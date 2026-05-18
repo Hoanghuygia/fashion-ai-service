@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Protocol
 
 from app.modules.background_removal.rembg_processor import RembgProcessor
 from app.modules.background_removal.schemas import BackgroundRemovalResponse
@@ -10,8 +11,45 @@ class BackgroundRemovalError(Exception):
     pass
 
 
+class Attachment(Protocol):
+    id: str
+    object_key: str
+    bucket: str
+    original_filename: str | None
+
+
+class AttachmentRepository(Protocol):
+    def get_active_by_id(self, attachment_id: str) -> Attachment | None: ...
+
+    def create(
+        self,
+        *,
+        id: str,
+        object_key: str,
+        bucket: str,
+        original_filename: str | None,
+        content_type: str | None,
+        size: int | None,
+        status: str | None,
+        is_deleted: bool,
+        source_attachment_id: str | None,
+    ) -> Attachment: ...
+
+    def update_status(self, attachment_id: str, status: str) -> None: ...
+
+
+class StorageClient(Protocol):
+    def download(self, bucket: str, object_key: str) -> bytes: ...
+
+    def upload(self, bucket: str, object_key: str, data: bytes, content_type: str) -> None: ...
+
+
 class BackgroundRemovalService:
-    def __init__(self, storage_client, attachments_repo) -> None:
+    def __init__(
+        self,
+        storage_client: StorageClient,
+        attachments_repo: AttachmentRepository,
+    ) -> None:
         self.storage = storage_client
         self.repo = attachments_repo
         self.processor = RembgProcessor()

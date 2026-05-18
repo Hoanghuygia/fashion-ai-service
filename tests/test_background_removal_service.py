@@ -221,3 +221,55 @@ def test_remove_background_route_exists() -> None:
         "processed_object_key": "ai-fashion/clothes/processed/att_2_nobg.png",
         "status": "BACKGROUND_REMOVED",
     }
+
+
+def test_remove_background_route_returns_404_for_missing_image() -> None:
+    from app.api.v1 import background_routes
+    from app.main import app
+    from app.modules.background_removal.service import BackgroundRemovalError
+
+    class FakeBackgroundRemovalService:
+        def remove_background(
+            self,
+            image_id: str,
+            processed_prefix: str,
+        ) -> BackgroundRemovalResponse:
+            raise BackgroundRemovalError("NOT_FOUND")
+
+    app.dependency_overrides[background_routes.get_background_removal_service] = (
+        FakeBackgroundRemovalService
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/v1/background/remove", json={"image_id": "missing"}
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+
+
+def test_remove_background_route_returns_500_for_processing_error() -> None:
+    from app.api.v1 import background_routes
+    from app.main import app
+    from app.modules.background_removal.service import BackgroundRemovalError
+
+    class FakeBackgroundRemovalService:
+        def remove_background(
+            self,
+            image_id: str,
+            processed_prefix: str,
+        ) -> BackgroundRemovalResponse:
+            raise BackgroundRemovalError("PROCESSING_FAILED")
+
+    app.dependency_overrides[background_routes.get_background_removal_service] = (
+        FakeBackgroundRemovalService
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/v1/background/remove", json={"image_id": "att_1"}
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 500

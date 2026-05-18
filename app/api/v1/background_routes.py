@@ -16,7 +16,7 @@ from app.modules.background_removal.service import (
     BackgroundRemovalService,
 )
 
-router = APIRouter(prefix="/api/v1/background", tags=["background"])
+router = APIRouter(prefix="/background", tags=["background"])
 
 PROCESSED_PREFIX = "ai-fashion/clothes/processed/"
 

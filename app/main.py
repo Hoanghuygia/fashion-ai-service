@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 
-from app.api.v1.background_routes import router as background_router
+from app.api.v1 import router as v1_router
 from app.config import get_settings
 
 settings = get_settings()
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
-app.include_router(background_router)
+app.include_router(v1_router)
 
 
 @app.get("/")

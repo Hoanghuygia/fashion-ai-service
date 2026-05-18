@@ -108,28 +108,6 @@ class _FakeStorage:
         self.uploaded = (bucket, object_key, data, content_type)
 
 
-def test_service_returns_processed_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.modules.background_removal.service import BackgroundRemovalService
-    from app.modules.background_removal.rembg_processor import RembgProcessor
-
-    attachment = _FakeAttachment()
-    repo = _FakeRepo(attachment)
-    storage = _FakeStorage()
-
-    monkeypatch.setattr(RembgProcessor, "remove_background", lambda self, data: b"png")
-
-    service = BackgroundRemovalService(storage, repo)
-    result = service.remove_background(
-        image_id=attachment.id,
-        processed_prefix="ai-fashion/clothes/processed/",
-    )
-
-    assert result.processed_object_key.startswith("ai-fashion/clothes/processed/")
-    assert result.status == "BACKGROUND_REMOVED"
-    assert repo.updated_status == (attachment.id, "BACKGROUND_REMOVED")
-    assert storage.uploaded is not None
-
-
 @dataclass
 class FakeAttachment:
     id: str

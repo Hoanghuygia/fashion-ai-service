@@ -25,4 +25,8 @@ def downgrade() -> None:
     metadata = MetaData()
     attachments = Table("attachments", metadata, autoload_with=engine)
     if "source_attachment_id" in attachments.c:
+        Index("ix_attachments_source_attachment_id", attachments.c.source_attachment_id).drop(
+            bind=engine,
+            checkfirst=True,
+        )
         attachments.c.source_attachment_id.drop()

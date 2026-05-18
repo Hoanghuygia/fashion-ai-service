@@ -36,3 +36,7 @@ def test_attachment_repo_create_and_get(session: Session) -> None:
     assert loaded is not None
     assert created.id == loaded.id
     assert loaded.is_deleted is False
+
+
+def test_migration_placeholder() -> None:
+    assert True

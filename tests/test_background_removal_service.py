@@ -5,11 +5,13 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.database.attachments_repo import AttachmentRepository
 from app.infrastructure.database.models import Base
+from app.modules.background_removal.schemas import BackgroundRemovalResponse
 from app.modules.background_removal.service import BackgroundRemovalService
 
 
@@ -183,3 +185,39 @@ def test_service_returns_processed_keys(monkeypatch: pytest.MonkeyPatch) -> None
     assert processed.size == len(b"processed")
 
     assert storage.objects[(original.bucket, result.processed_object_key)] == b"processed"
+
+
+def test_remove_background_route_exists() -> None:
+    from app.api.v1 import background_routes
+    from app.main import app
+
+    class FakeBackgroundRemovalService:
+        def remove_background(
+            self, image_id: str, processed_prefix: str
+        ) -> BackgroundRemovalResponse:
+            assert image_id == "att_1"
+            assert processed_prefix == "ai-fashion/clothes/processed/"
+            return BackgroundRemovalResponse(
+                image_id=image_id,
+                original_object_key="ai-fashion/clothes/raw/att_1.png",
+                processed_object_key="ai-fashion/clothes/processed/att_2_nobg.png",
+                status="BACKGROUND_REMOVED",
+            )
+
+    app.dependency_overrides[background_routes.get_background_removal_service] = (
+        FakeBackgroundRemovalService
+    )
+    try:
+        response = TestClient(app).post(
+            "/api/v1/background/remove", json={"image_id": "att_1"}
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "image_id": "att_1",
+        "original_object_key": "ai-fashion/clothes/raw/att_1.png",
+        "processed_object_key": "ai-fashion/clothes/processed/att_2_nobg.png",
+        "status": "BACKGROUND_REMOVED",
+    }

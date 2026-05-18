@@ -1,33 +1,34 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import uuid
 
-from app.modules.background_removal.schemas import (
-    BackgroundRemovalRequest,
-    BackgroundRemovalResult,
-)
+from app.modules.background_removal.rembg_processor import RembgProcessor
+from app.modules.background_removal.schemas import BackgroundRemovalResponse
 
 
-@dataclass(frozen=True)
+class BackgroundRemovalError(Exception):
+    pass
+
+
 class BackgroundRemovalService:
-    repo: object
-    storage: object
-    processor: object
+    def __init__(self, storage_client, attachments_repo) -> None:
+        self.storage = storage_client
+        self.repo = attachments_repo
+        self.processor = RembgProcessor()
 
-    def process(self, request: BackgroundRemovalRequest) -> BackgroundRemovalResult:
-        attachment = self.repo.get_active_by_id(request.attachment_id)
+    def remove_background(self, image_id: str, processed_prefix: str) -> BackgroundRemovalResponse:
+        attachment = self.repo.get_active_by_id(image_id)
         if attachment is None:
-            raise ValueError("Attachment not found")
+            raise BackgroundRemovalError("NOT_FOUND")
 
         original_bytes = self.storage.download(attachment.bucket, attachment.object_key)
         processed_bytes = self.processor.remove_background(original_bytes)
+
         processed_id = f"att_{uuid.uuid4().hex}"
-        processed_object_key = f"{request.processed_prefix}/{processed_id}_nobg.png"
-        processed_bucket = attachment.bucket
+        processed_object_key = f"{processed_prefix}{processed_id}_nobg.png"
 
         self.storage.upload(
-            processed_bucket,
+            attachment.bucket,
             processed_object_key,
             processed_bytes,
             "image/png",
@@ -36,8 +37,8 @@ class BackgroundRemovalService:
         self.repo.create(
             id=processed_id,
             object_key=processed_object_key,
-            bucket=processed_bucket,
-            original_filename=None,
+            bucket=attachment.bucket,
+            original_filename=attachment.original_filename,
             content_type="image/png",
             size=len(processed_bytes),
             status="BACKGROUND_REMOVED",
@@ -46,8 +47,9 @@ class BackgroundRemovalService:
         )
         self.repo.update_status(attachment.id, "BACKGROUND_REMOVED")
 
-        return BackgroundRemovalResult(
-            processed_attachment_id=processed_id,
-            processed_bucket=processed_bucket,
+        return BackgroundRemovalResponse(
+            image_id=attachment.id,
+            original_object_key=attachment.object_key,
             processed_object_key=processed_object_key,
+            status="BACKGROUND_REMOVED",
         )

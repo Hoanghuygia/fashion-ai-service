@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass(frozen=True)
-class BackgroundRemovalRequest:
-    attachment_id: str
-    processed_prefix: str
+class BackgroundRemovalRequest(BaseModel):
+    image_id: str
 
 
-@dataclass(frozen=True)
-class BackgroundRemovalResult:
-    processed_attachment_id: str
-    processed_bucket: str
+class BackgroundRemovalResponse(BaseModel):
+    image_id: str
+    original_object_key: str
     processed_object_key: str
+    status: str

@@ -68,6 +68,68 @@ def test_storage_client_builds(monkeypatch: pytest.MonkeyPatch) -> None:
     assert client.client.meta.config.s3["addressing_style"] == "path"
 
 
+class _FakeAttachment:
+    def __init__(self) -> None:
+        self.id = "att_1"
+        self.object_key = "raw/test.png"
+        self.bucket = "style-engine-test"
+        self.original_filename = "test.png"
+
+
+class _FakeRepo:
+    def __init__(self, attachment: _FakeAttachment) -> None:
+        self.attachment = attachment
+        self.created = None
+        self.updated_status = None
+
+    def get_active_by_id(self, attachment_id: str):
+        if attachment_id == self.attachment.id:
+            return self.attachment
+        return None
+
+    def create(self, **kwargs):
+        self.created = kwargs
+        return kwargs
+
+    def update_status(self, attachment_id: str, status: str) -> None:
+        self.updated_status = (attachment_id, status)
+
+
+class _FakeStorage:
+    def __init__(self) -> None:
+        self.downloaded = None
+        self.uploaded = None
+
+    def download(self, bucket: str, object_key: str) -> bytes:
+        self.downloaded = (bucket, object_key)
+        return b"raw-bytes"
+
+    def upload(self, bucket: str, object_key: str, data: bytes, content_type: str) -> None:
+        self.uploaded = (bucket, object_key, data, content_type)
+
+
+def test_service_returns_processed_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.modules.background_removal.service import BackgroundRemovalService
+    from app.modules.background_removal.rembg_processor import RembgProcessor
+
+    attachment = _FakeAttachment()
+    repo = _FakeRepo(attachment)
+    storage = _FakeStorage()
+
+    monkeypatch.setattr(RembgProcessor, "remove_background", lambda self, data: b"png")
+
+    service = BackgroundRemovalService(storage, repo)
+    result = service.remove_background(
+        image_id=attachment.id,
+        processed_prefix="ai-fashion/clothes/processed/",
+    )
+
+    assert result.processed_object_key.startswith("ai-fashion/clothes/processed/")
+    assert result.status == "BACKGROUND_REMOVED"
+    assert repo.updated_status == (attachment.id, "BACKGROUND_REMOVED")
+    assert storage.uploaded is not None
+
+
 @dataclass
 class FakeAttachment:
     id: str
@@ -149,11 +211,11 @@ class FakeProcessor:
         return self.processed
 
 
-def test_service_returns_processed_keys() -> None:
+def test_service_returns_processed_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.modules.background_removal.rembg_processor import RembgProcessor
+
     repo = FakeAttachmentRepo()
     storage = FakeStorageClient()
-    processor = FakeProcessor(processed=b"processed-bytes")
-    service = BackgroundRemovalService(repo=repo, storage=storage, processor=processor)
     original = repo.create(
         id="att_1",
         object_key="raw/test.png",
@@ -167,24 +229,25 @@ def test_service_returns_processed_keys() -> None:
     )
     storage.objects[(original.bucket, original.object_key)] = b"raw-bytes"
 
-    result = service.process(
-        BackgroundRemovalRequest(
-            attachment_id=original.id,
-            processed_prefix="processed",
-        )
+    monkeypatch.setattr(RembgProcessor, "remove_background", lambda self, data: b"processed")
+
+    service = BackgroundRemovalService(storage, repo)
+    result = service.remove_background(
+        image_id=original.id,
+        processed_prefix="processed/",
     )
 
-    assert result.processed_bucket == "style-engine"
     assert result.processed_object_key.startswith("processed/")
     assert result.processed_object_key.endswith("_nobg.png")
+    assert result.status == "BACKGROUND_REMOVED"
     assert repo.get_active_by_id(original.id).status == "BACKGROUND_REMOVED"
 
-    processed = repo.get_active_by_id(result.processed_attachment_id)
+    processed = repo.get_active_by_id(repo.created_ids[-1])
     assert processed is not None
     assert processed.source_attachment_id == original.id
     assert processed.object_key == result.processed_object_key
     assert processed.status == "BACKGROUND_REMOVED"
     assert processed.content_type == "image/png"
-    assert processed.size == len(b"processed-bytes")
+    assert processed.size == len(b"processed")
 
-    assert storage.objects[(result.processed_bucket, result.processed_object_key)] == b"processed-bytes"
+    assert storage.objects[(original.bucket, result.processed_object_key)] == b"processed"

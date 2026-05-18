@@ -1,6 +1,17 @@
 from __future__ import annotations
 
 
+from io import BytesIO
+
+from PIL import Image
+
+
 class RembgProcessor:
     def remove_background(self, data: bytes) -> bytes:
-        return data
+        from rembg import remove
+
+        image = Image.open(BytesIO(data)).convert("RGBA")
+        output = remove(image)
+        buffer = BytesIO()
+        output.save(buffer, format="PNG")
+        return buffer.getvalue()

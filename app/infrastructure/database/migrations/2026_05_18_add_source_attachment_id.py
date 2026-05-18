@@ -12,7 +12,7 @@ def upgrade() -> None:
         Column("source_attachment_id", String, ForeignKey("attachments.id"), nullable=True).create(
             attachments
         )
-        attachments = Table("attachments", metadata, autoload_with=engine)
+    attachments = Table("attachments", metadata, autoload_with=engine)
     Index("ix_attachments_source_attachment_id", attachments.c.source_attachment_id).create(
         bind=engine,
         checkfirst=True,

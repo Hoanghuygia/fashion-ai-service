@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, cast
 
-import boto3
-from botocore.config import Config
+import boto3  # type: ignore[import-untyped]
+from botocore.config import Config  # type: ignore[import-untyped]
 
 from app.config import get_settings
 
 
 @dataclass(frozen=True)
 class StorageClient:
-    client: object
+    client: Any
     bucket: str
 
     @classmethod
-    def build(cls) -> "StorageClient":
+    def build(cls) -> StorageClient:
         settings = get_settings()
 
         config = Config(
@@ -34,7 +35,7 @@ class StorageClient:
 
     def download(self, bucket: str, object_key: str) -> bytes:
         response = self.client.get_object(Bucket=bucket, Key=object_key)
-        return response["Body"].read()
+        return cast(bytes, response["Body"].read())
 
     def upload(self, bucket: str, object_key: str, data: bytes, content_type: str) -> None:
         self.client.put_object(

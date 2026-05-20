@@ -209,18 +209,21 @@ def test_remove_background_route_exists() -> None:
         FakeBackgroundRemovalService
     )
     try:
-        response = TestClient(app).post(
-            "/api/v1/background/remove", json={"image_id": "att_1"}
-        )
+        response = TestClient(app).post("/api/v1/background/remove", json={"image_id": "att_1"})
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.json() == {
-        "image_id": "att_1",
-        "original_object_key": "ai-fashion/clothes/raw/att_1.png",
-        "processed_object_key": "ai-fashion/clothes/processed/att_2_nobg.png",
-        "status": "BACKGROUND_REMOVED",
+        "data": {
+            "image_id": "att_1",
+            "original_object_key": "ai-fashion/clothes/raw/att_1.png",
+            "processed_object_key": "ai-fashion/clothes/processed/att_2_nobg.png",
+            "status": "BACKGROUND_REMOVED",
+        },
+        "message": "OK",
+        "stackTrace": None,
+        "exceptionCode": None,
     }
 
 
@@ -241,9 +244,7 @@ def test_remove_background_route_returns_404_for_missing_image() -> None:
         FakeBackgroundRemovalService
     )
     try:
-        response = TestClient(app).post(
-            "/api/v1/background/remove", json={"image_id": "missing"}
-        )
+        response = TestClient(app).post("/api/v1/background/remove", json={"image_id": "missing"})
     finally:
         app.dependency_overrides.clear()
 
@@ -267,9 +268,7 @@ def test_remove_background_route_returns_500_for_processing_error() -> None:
         FakeBackgroundRemovalService
     )
     try:
-        response = TestClient(app).post(
-            "/api/v1/background/remove", json={"image_id": "att_1"}
-        )
+        response = TestClient(app).post("/api/v1/background/remove", json={"image_id": "att_1"})
     finally:
         app.dependency_overrides.clear()
 

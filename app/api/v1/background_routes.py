@@ -1,9 +1,12 @@
 from collections.abc import Iterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.core.error_codes import ErrorCode
+from app.core.exceptions import AppException
+from app.core.responses import BaseResponse, success_response
 from app.infrastructure.database.attachments_repo import AttachmentRepository
 from app.infrastructure.database.session import SessionLocal
 from app.infrastructure.storage.s3_client import StorageClient
@@ -16,7 +19,7 @@ from app.modules.background_removal.service import (
     BackgroundRemovalService,
 )
 
-router = APIRouter(prefix="/background", tags=["background"])
+router = APIRouter(prefix="/background", tags=["Background Removal"])
 
 PROCESSED_PREFIX = "ai-fashion/clothes/processed/"
 
@@ -40,19 +43,22 @@ def get_background_removal_service(
     )
 
 
-@router.post("/remove", response_model=BackgroundRemovalResponse)
+@router.post("/remove", response_model=BaseResponse[BackgroundRemovalResponse])
 def remove_background(
     request: BackgroundRemovalRequest,
-    service: Annotated[
-        BackgroundRemovalService, Depends(get_background_removal_service)
-    ],
-) -> BackgroundRemovalResponse:
+    service: Annotated[BackgroundRemovalService, Depends(get_background_removal_service)],
+) -> BaseResponse[BackgroundRemovalResponse]:
     try:
-        return service.remove_background(
-            image_id=request.image_id,
-            processed_prefix=PROCESSED_PREFIX,
+        return success_response(
+            service.remove_background(
+                image_id=request.image_id,
+                processed_prefix=PROCESSED_PREFIX,
+            )
         )
     except BackgroundRemovalError as exc:
         if str(exc) == "NOT_FOUND":
-            raise HTTPException(status_code=404, detail="Image not found") from exc
-        raise HTTPException(status_code=500, detail="Background removal failed") from exc
+            raise AppException(ErrorCode.NOT_FOUND, "Image not found") from exc
+        raise AppException(
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            "Background removal failed",
+        ) from exc

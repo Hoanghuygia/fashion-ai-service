@@ -38,7 +38,7 @@ def _stack_trace(exc: Exception, debug: bool) -> str | None:
 
 
 def _error_payload(
-    *,
+    *,  # Force keyword arguments
     message: str,
     exception_code: str,
     stack_trace: str | None,

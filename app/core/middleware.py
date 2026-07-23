@@ -23,7 +23,7 @@ class RequestLoggingMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
-            await self.app(scope, receive, send)
+            await self.app(scope, receive, send)# Call next middleware or app if not an HTTP request
             return
 
         request_id = _request_id(scope)
@@ -47,7 +47,7 @@ class RequestLoggingMiddleware:
         )
 
         async def send_wrapper(message: Message) -> None:
-            nonlocal status_code
+            nonlocal status_code # indicate the variable is not local in nested function 
             if message["type"] == "http.response.start":
                 status_code = int(message["status"])
                 headers = list(message.get("headers", []))

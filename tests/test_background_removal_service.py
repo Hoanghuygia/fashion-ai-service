@@ -190,6 +190,7 @@ def test_service_returns_processed_keys(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_remove_background_route_exists() -> None:
     from app.api.v1 import background_routes
+    from app.core.auth import require_api_key
     from app.main import app
 
     class FakeBackgroundRemovalService:
@@ -208,6 +209,7 @@ def test_remove_background_route_exists() -> None:
     app.dependency_overrides[background_routes.get_background_removal_service] = (
         FakeBackgroundRemovalService
     )
+    app.dependency_overrides[require_api_key] = lambda: None
     try:
         response = TestClient(app).post("/api/v1/background/remove", json={"image_id": "att_1"})
     finally:
@@ -229,6 +231,7 @@ def test_remove_background_route_exists() -> None:
 
 def test_remove_background_route_returns_404_for_missing_image() -> None:
     from app.api.v1 import background_routes
+    from app.core.auth import require_api_key
     from app.main import app
     from app.modules.background_removal.service import BackgroundRemovalError
 
@@ -243,6 +246,7 @@ def test_remove_background_route_returns_404_for_missing_image() -> None:
     app.dependency_overrides[background_routes.get_background_removal_service] = (
         FakeBackgroundRemovalService
     )
+    app.dependency_overrides[require_api_key] = lambda: None
     try:
         response = TestClient(app).post("/api/v1/background/remove", json={"image_id": "missing"})
     finally:
@@ -253,6 +257,7 @@ def test_remove_background_route_returns_404_for_missing_image() -> None:
 
 def test_remove_background_route_returns_500_for_processing_error() -> None:
     from app.api.v1 import background_routes
+    from app.core.auth import require_api_key
     from app.main import app
     from app.modules.background_removal.service import BackgroundRemovalError
 
@@ -267,6 +272,7 @@ def test_remove_background_route_returns_500_for_processing_error() -> None:
     app.dependency_overrides[background_routes.get_background_removal_service] = (
         FakeBackgroundRemovalService
     )
+    app.dependency_overrides[require_api_key] = lambda: None
     try:
         response = TestClient(app).post("/api/v1/background/remove", json={"image_id": "att_1"})
     finally:

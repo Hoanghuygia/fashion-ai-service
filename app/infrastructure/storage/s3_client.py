@@ -18,9 +18,7 @@ class StorageClient:
     def build(cls) -> StorageClient:
         settings = get_settings()
 
-        config = Config(
-            s3={"addressing_style": "path" if settings.s3_path_style else "virtual"}
-        )
+        config = Config(s3={"addressing_style": "path" if settings.s3_path_style else "virtual"})
         client = boto3.client(
             "s3",
             endpoint_url=settings.s3_endpoint,

@@ -8,7 +8,7 @@ from app.core.error_codes import ErrorCode
 from app.core.exceptions import AppException
 from app.core.responses import BaseResponse, success_response
 from app.infrastructure.database.attachments_repo import AttachmentRepository
-from app.infrastructure.database.session import SessionLocal
+from app.infrastructure.database.session import create_session
 from app.infrastructure.storage.s3_client import StorageClient
 from app.modules.background_removal.schemas import (
     BackgroundRemovalRequest,
@@ -25,7 +25,7 @@ PROCESSED_PREFIX = "ai-fashion/clothes/processed/"
 
 
 def get_db_session() -> Iterator[Session]:
-    with SessionLocal() as session:
+    with create_session() as session:
         yield session
 
 
@@ -58,6 +58,8 @@ def remove_background(
     except BackgroundRemovalError as exc:
         if str(exc) == "NOT_FOUND":
             raise AppException(ErrorCode.NOT_FOUND, "Image not found") from exc
+        if str(exc) == "IMAGE_TOO_LARGE":
+            raise AppException(ErrorCode.BAD_REQUEST, "Image is too large to process") from exc
         raise AppException(
             ErrorCode.INTERNAL_SERVER_ERROR,
             "Background removal failed",

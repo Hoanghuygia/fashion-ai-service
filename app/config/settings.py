@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=100, validation_alias="RATE_LIMIT_REQUESTS")
     rate_limit_window_seconds: int = Field(default=60, validation_alias="RATE_LIMIT_WINDOW_SECONDS")
 
+    internal_api_key: str = Field(validation_alias="INTERNAL_API_KEY")
+
     database_url: str = Field(validation_alias="DATABASE_URL")
     redis_url: str = Field(validation_alias="REDIS_URL")
 
@@ -61,7 +63,9 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return init_settings, dotenv_settings, env_settings, file_secret_settings
+        # Priority high -> low. Real OS/container env vars must win over a local
+        # committed-by-mistake `.env`, so env_settings comes before dotenv_settings.
+        return init_settings, env_settings, dotenv_settings, file_secret_settings
 
 
 @lru_cache

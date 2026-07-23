@@ -50,7 +50,36 @@ Run local infrastructure:
 docker compose up --build
 ```
 
-Current implementation is intentionally limited to the FastAPI foundation, configuration skeleton, smoke tests, and Docker Compose infrastructure. AI modules, API routes, workers, provider adapters, pipelines, and jobs are planned architecture only.
+Run database migrations (creates the `attachments` table and future schema):
+
+```bash
+.venv/bin/python -m alembic upgrade head
+```
+
+> On Windows use `.venv/Scripts/python` instead of `.venv/bin/python`.
+
+---
+
+# Implementation Status
+
+This repository is an early foundation. What actually exists today vs. what is
+still planned architecture:
+
+| Area | Status |
+|---|---|
+| FastAPI foundation, config, error handling, middleware, rate limiting | ✅ Implemented |
+| S3-compatible storage client + `attachments` model/repository | ✅ Implemented |
+| Alembic migrations | ✅ Implemented |
+| Static internal API key auth | ✅ Implemented |
+| Background removal (rembg, **synchronous**) | ✅ Implemented |
+| Async workers / job queue (Celery/RQ + Redis) | ⏳ Planned |
+| Metadata extraction, outfit generation, virtual try-on, evaluation | ⏳ Planned |
+| Provider adapter layer (OpenAI, Gemini, Replicate, remove.bg, Clipdrop) | ⏳ Planned |
+| Pipelines & workflows | ⏳ Planned |
+
+Everything under **Target Architecture**, **Core AI Modules** (except background
+removal), and **Planned Project Structure** below documents intended design, not
+current code.
 
 ---
 
@@ -224,13 +253,15 @@ style-engine-ai/
 │   └── config/
 │       └── settings.py
 │
+├── migrations/            # Alembic migrations (implemented)
 ├── tests/
 ├── scripts/
 ├── docker/
 ├── docs/
+├── alembic.ini
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
+├── pyproject.toml         # single source of dependencies
 └── README.md
 ```
 

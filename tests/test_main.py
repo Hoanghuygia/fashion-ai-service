@@ -41,7 +41,11 @@ def test_request_id_header_is_returned() -> None:
 def test_validation_error_uses_base_response_format() -> None:
     app.state.settings.debug = False
 
-    response = client.post("/api/v1/background/remove", json={})
+    response = client.post(
+        "/api/v1/background/remove",
+        json={},
+        headers={"X-API-Key": settings.internal_api_key},
+    )
 
     assert response.status_code == 422
     assert response.json()["data"] is None

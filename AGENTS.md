@@ -2,7 +2,8 @@
 
 ## Current Stack
 - Python 3.12+ FastAPI service for the Style Engine AI microservice described in `README.md`.
-- Project initialization is intentionally minimal: no AI modules, provider adapters, pipelines, jobs, or business APIs are implemented yet.
+- Implemented so far: FastAPI foundation, config, error handling, middleware, rate limiting, S3-compatible storage, `attachments` model/repo, Alembic migrations, static internal API key auth, and a synchronous background-removal module (rembg).
+- Not yet implemented: async workers/job queue, provider adapter layer, pipelines/workflows, and the remaining AI modules (metadata, outfit generation, virtual try-on, evaluation).
 - Local infrastructure targets PostgreSQL, Redis, and MinIO through `docker-compose.yml`.
 
 ## Commands
@@ -13,6 +14,8 @@
 - Format: `.venv/bin/python -m ruff format .`
 - Typecheck: `.venv/bin/python -m mypy app tests`
 - Run API locally: `.venv/bin/python -m uvicorn app.main:app --reload`
+- Apply DB migrations: `.venv/bin/python -m alembic upgrade head`
+- Create a new migration: `.venv/bin/python -m alembic revision -m "message"` (use `--autogenerate` against a live DB)
 - Validate Docker Compose: `docker compose config`
 
 ## Constraints

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Protocol
 
-from app.modules.background_removal.rembg_processor import RembgProcessor
+from app.modules.background_removal.rembg_processor import ImageTooLargeError, RembgProcessor
 from app.modules.background_removal.schemas import BackgroundRemovalResponse
 
 
@@ -60,7 +60,10 @@ class BackgroundRemovalService:
             raise BackgroundRemovalError("NOT_FOUND")
 
         original_bytes = self.storage.download(attachment.bucket, attachment.object_key)
-        processed_bytes = self.processor.remove_background(original_bytes)
+        try:
+            processed_bytes = self.processor.remove_background(original_bytes)
+        except ImageTooLargeError as exc:
+            raise BackgroundRemovalError("IMAGE_TOO_LARGE") from exc
 
         processed_id = f"att_{uuid.uuid4().hex}"
         processed_object_key = f"{processed_prefix}{processed_id}_nobg.png"

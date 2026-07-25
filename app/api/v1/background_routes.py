@@ -1,14 +1,11 @@
-from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import AppException
 from app.core.responses import BaseResponse, success_response
-from app.infrastructure.database.attachments_repo import AttachmentRepository
-from app.infrastructure.database.session import create_session
+from app.infrastructure.database.unit_of_work import UnitOfWork
 from app.infrastructure.storage.s3_client import StorageClient
 from app.modules.background_removal.schemas import (
     BackgroundRemovalRequest,
@@ -24,23 +21,19 @@ router = APIRouter(prefix="/background", tags=["Background Removal"])
 PROCESSED_PREFIX = "ai-fashion/clothes/processed/"
 
 
-def get_db_session() -> Iterator[Session]:
-    with create_session() as session:
-        yield session
-
-
 def get_storage_client() -> StorageClient:
     return StorageClient.build()
 
 
+def get_unit_of_work() -> UnitOfWork:
+    return UnitOfWork()
+
+
 def get_background_removal_service(
     storage_client: Annotated[StorageClient, Depends(get_storage_client)],
-    db_session: Annotated[Session, Depends(get_db_session)],
+    uow: Annotated[UnitOfWork, Depends(get_unit_of_work)],
 ) -> BackgroundRemovalService:
-    return BackgroundRemovalService(
-        storage_client=storage_client,
-        attachments_repo=AttachmentRepository(db_session),
-    )
+    return BackgroundRemovalService(storage_client=storage_client, uow=uow)
 
 
 @router.post("/remove", response_model=BaseResponse[BackgroundRemovalResponse])

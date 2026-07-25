@@ -5,8 +5,9 @@
 - **Internal Authentication** — the endpoint is gated by the internal credential.
 - **Service Foundation** — for the response envelope, error catalog, and rate
   limiting.
-- **Attachment records** (system capability) — reads the original attachment and
-  creates a linked processed attachment.
+- **Data Persistence** — reads the original attachment and, in a single
+  transaction, creates a linked processed attachment and updates statuses
+  (all-or-nothing).
 - **Object storage** (system capability) — downloads the original bytes and
   uploads the processed PNG.
 

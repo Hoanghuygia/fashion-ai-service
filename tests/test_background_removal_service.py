@@ -144,6 +144,26 @@ class FakeStorageClient:
         self.objects[(bucket, object_key)] = data
 
 
+class FakeUnitOfWork:
+    def __init__(self, attachments: FakeAttachmentRepo) -> None:
+        self.attachments = attachments
+        self.commits = 0
+        self.rollbacks = 0
+
+    def __enter__(self) -> FakeUnitOfWork:
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        if exc_type is not None:
+            self.rollback()
+
+    def commit(self) -> None:
+        self.commits += 1
+
+    def rollback(self) -> None:
+        self.rollbacks += 1
+
+
 def test_service_returns_processed_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.modules.background_removal.rembg_processor import RembgProcessor
 
@@ -164,12 +184,14 @@ def test_service_returns_processed_keys(monkeypatch: pytest.MonkeyPatch) -> None
 
     monkeypatch.setattr(RembgProcessor, "remove_background", lambda self, data: b"processed")
 
-    service = BackgroundRemovalService(storage, repo)
+    uow = FakeUnitOfWork(repo)
+    service = BackgroundRemovalService(storage, uow)
     result = service.remove_background(
         image_id=original.id,
         processed_prefix="processed/",
     )
 
+    assert uow.commits == 1
     assert result.processed_object_key.startswith("processed/")
     assert result.processed_object_key.endswith("_nobg.png")
     assert result.status == "BACKGROUND_REMOVED"
